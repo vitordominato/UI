@@ -141,6 +141,6 @@ elif menu == "Cadastro de Médico":
         submitted_medico = st.form_submit_button("Salvar")
 
         if submitted_medico and novo_medico:
-            df_medicos = df_medicos.append({"Nome do Médico": novo_medico}, ignore_index=True)
+            df_medicos = pd.concat([df_medicos, pd.DataFrame([{"Nome do Médico": novo_medico}])], ignore_index=True)
             salvar_dados_medicos(df_medicos)
             st.success("Médico cadastrado com sucesso!")
