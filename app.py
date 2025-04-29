@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Configurações iniciais do app
+# Configuração do app para celular
 st.set_page_config(page_title="Gestão de Internações", layout="wide")
 
 # Estilo do botão Salvar (verde)
@@ -23,8 +23,8 @@ def carregar_dados_pacientes():
         return pd.read_excel("Planilha_Mestre_Internacoes_Com_Setor.xlsx")
     except:
         return pd.DataFrame(columns=[
-            "ID", "Data de Atualização", "Número do Atendimento", "Número do Leito",
-            "Unidade", "Andar", "Setor Médico", "Nome do Médico Responsável",
+            "Data de Atualização", "Número do Atendimento", "Número do Leito",
+            "Unidade", "Andar", "Equipe", "Nome do Médico Responsável",
             "Pendência do Turno", "Aguarda Desospitalização", "Aguarda Cirurgia",
             "Operadora de Saúde", "Origem do Paciente", "Intercorrência",
             "Código da Intercorrência", "Risco Assistencial",
@@ -53,9 +53,9 @@ menu = st.sidebar.radio("Menu", ["Painel de Internações", "Cadastro de Pacient
 # Painel de Internações
 if menu == "Painel de Internações":
     st.title("Painel de Internações")
-    
+
     filtro_medico = st.selectbox("Filtrar por Médico (ou deixe vazio para ver todos):", ["Todos"] + sorted(df_medicos["Nome do Médico"].dropna().tolist()))
-    
+
     if filtro_medico != "Todos":
         pacientes_filtrados = df_pacientes[(df_pacientes["Nome do Médico Responsável"] == filtro_medico) & (df_pacientes["Foi Alta"] != "Sim")]
     else:
@@ -66,27 +66,26 @@ if menu == "Painel de Internações":
     st.dataframe(pacientes_filtrados)
 
     st.subheader("Dar Alta a Paciente")
-    id_paciente = st.text_input("ID do Paciente para Alta:")
+    numero_atendimento_alta = st.text_input("Número do Atendimento do Paciente para Alta:")
 
     if st.button("Salvar Alta"):
-        if id_paciente:
-            df_pacientes.loc[df_pacientes["ID"] == int(id_paciente), "Foi Alta"] = "Sim"
+        if numero_atendimento_alta:
+            df_pacientes.loc[df_pacientes["Número do Atendimento"] == numero_atendimento_alta, "Foi Alta"] = "Sim"
             salvar_dados_pacientes(df_pacientes)
             st.success("Alta registrada com sucesso!")
         else:
-            st.error("Por favor, preencha o ID do paciente.")
+            st.error("Por favor, preencha o número do atendimento.")
 
 # Cadastro de Paciente
 elif menu == "Cadastro de Paciente":
     st.title("Cadastro de Novo Paciente")
 
     with st.form("cadastro_paciente"):
-        id_paciente = st.number_input("ID *", step=1)
         numero_atendimento = st.text_input("Número do Atendimento *")
         numero_leito = st.text_input("Número do Leito *")
         unidade = st.selectbox("Unidade *", ["Unidade I", "Unidade III", "Unidade IV"])
         andar = st.number_input("Andar *", step=1)
-        setor_medico = st.text_input("Setor Médico *")
+        equipe = st.selectbox("Equipe *", ["Hematologia", "Oncologia", "TMO", "Hepatologia", "Cardiologia", "Clínica Médica", "GO", "Pediatria", "MA"])
         nome_medico = st.selectbox("Nome do Médico Responsável *", sorted(df_medicos["Nome do Médico"].dropna().tolist()))
         pendencia_turno = st.text_area("Pendência do Turno")
         aguarda_desospitalizacao = st.selectbox("Aguarda Desospitalização? *", ["Sim", "Não"])
@@ -108,13 +107,12 @@ elif menu == "Cadastro de Paciente":
 
         if submitted:
             novo_paciente = {
-                "ID": id_paciente,
                 "Data de Atualização": datetime.now(),
                 "Número do Atendimento": numero_atendimento,
                 "Número do Leito": numero_leito,
                 "Unidade": unidade,
                 "Andar": andar,
-                "Setor Médico": setor_medico,
+                "Equipe": equipe,
                 "Nome do Médico Responsável": nome_medico,
                 "Pendência do Turno": pendencia_turno,
                 "Aguarda Desospitalização": aguarda_desospitalizacao,
@@ -128,7 +126,7 @@ elif menu == "Cadastro de Paciente":
                 "Foi Alta": "Não",
                 "Observações": observacoes
             }
-            df_pacientes = df_pacientes.append(novo_paciente, ignore_index=True)
+            df_pacientes = pd.concat([df_pacientes, pd.DataFrame([novo_paciente])], ignore_index=True)
             salvar_dados_pacientes(df_pacientes)
             st.success("Paciente cadastrado com sucesso!")
 
