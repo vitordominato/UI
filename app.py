@@ -76,6 +76,12 @@ if opcao == "Cadastro de Médico":
 if opcao == "Painel de Leitos":
     st.title("📋 Painel de Leitos por Unidade e Andar")
 
+    col_f1, col_f2 = st.columns([1, 2])
+    with col_f1:
+        unidade_selecionada = st.selectbox("Unidade", list(estrutura_leitos.keys()))
+    with col_f2:
+        andar_selecionado = st.selectbox("Andar", list(estrutura_leitos[unidade_selecionada].keys()))
+
     def exibir_leitos(unidade, andar, leitos):
         st.markdown(f"### {unidade} – {andar}")
         cols = st.columns(6)
@@ -86,7 +92,7 @@ if opcao == "Painel de Leitos":
                 nome_display = paciente.get("nome", "[Vazio]")
                 st.markdown(f"**Leito {leito}**")
                 if st.button(f"✏️ {nome_display}", key=f"btn_{chave}"):
-                    with st.modal(f"Editar Leito {leito} - {unidade} - {andar}"):
+                    with st.expander(f"Editar Leito {leito} - {unidade} - {andar}", expanded=True):
                         if st.session_state.nome_em_transicao:
                             nome = st.text_input("Nome do paciente", value=st.session_state.nome_em_transicao.get("nome", ""))
                             origem = st.session_state.nome_em_transicao.get("origem", "")
@@ -107,12 +113,6 @@ if opcao == "Painel de Leitos":
                             st.session_state.nome_em_transicao = None
                             st.success("Dados salvos com sucesso!")
 
-                        if nome and medico:
-                            st.markdown("---")
-                            st.subheader("📌 Ficha Clínica Assistencial")
-                            # ... restante da ficha omitido para foco
-
-    # ✅ CHAMADA ESSENCIAL PARA EXIBIR OS LEITOS
-    for unidade, andares in estrutura_leitos.items():
-        for andar, leitos in andares.items():
-            exibir_leitos(unidade, andar, leitos)
+    # ✅ Mostrar apenas a combinação selecionada
+    leitos_exibir = estrutura_leitos[unidade_selecionada][andar_selecionado]
+    exibir_leitos(unidade_selecionada, andar_selecionado, leitos_exibir)
