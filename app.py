@@ -52,10 +52,12 @@ if "transicao" not in st.session_state:
 if "nome_em_transicao" not in st.session_state:
     st.session_state.nome_em_transicao = None
 
+if "leito_em_edicao" not in st.session_state:
+    st.session_state.leito_em_edicao = None
+
 st.sidebar.title("🔧 Navegação")
 opcao = st.sidebar.radio("Escolha a visualização:", ["Painel de Leitos", "Visão do Plantonista", "Listas do Dia", "Painel de Indicadores", "Cadastro de Médico"])
 
-# Nova aba: Cadastro de Médico
 if opcao == "Cadastro de Médico":
     st.title("🩺 Cadastro de Médico")
     novo_medico = st.text_input("Nome completo do novo médico")
@@ -72,7 +74,6 @@ if opcao == "Cadastro de Médico":
         else:
             st.warning("Por favor, insira um nome válido.")
 
-# Substituição do campo de médico no Painel de Leitos
 if opcao == "Painel de Leitos":
     st.title("📋 Painel de Leitos por Unidade e Andar")
 
@@ -92,16 +93,18 @@ if opcao == "Painel de Leitos":
                 nome_display = paciente.get("nome", "[Vazio]")
                 st.markdown(f"**Leito {leito}**")
                 if st.button(f"✏️ {nome_display}", key=f"btn_{chave}"):
+                    st.session_state.leito_em_edicao = chave
+                if st.session_state.leito_em_edicao == chave:
                     with st.expander(f"Editar Leito {leito} - {unidade} - {andar}", expanded=True):
                         if st.session_state.nome_em_transicao:
-                            nome = st.text_input("Nome do paciente", value=st.session_state.nome_em_transicao.get("nome", ""))
+                            nome = st.text_input("Nome do paciente", value=st.session_state.nome_em_transicao.get("nome", ""), key=f"nome_{chave}")
                             origem = st.session_state.nome_em_transicao.get("origem", "")
                             obs_trans = st.session_state.nome_em_transicao.get("observacoes", "")
                             st.markdown(f"🔄 Dados importados da transição: Origem: **{origem}** | Obs: {obs_trans}")
                         else:
-                            nome = st.text_input("Nome do paciente", value=paciente.get("nome", ""))
+                            nome = st.text_input("Nome do paciente", value=paciente.get("nome", ""), key=f"nome_{chave}")
 
-                        medico = st.selectbox("Médico responsável", options=lista_medicos) if lista_medicos else st.text_input("Médico responsável")
+                        medico = st.selectbox("Médico responsável", options=lista_medicos, index=lista_medicos.index(paciente.get("medico")) if paciente.get("medico") in lista_medicos else 0, key=f"medico_{chave}") if lista_medicos else st.text_input("Médico responsável", key=f"medico_{chave}")
 
                         if st.button("Salvar cadastro inicial", key=f"salvar_{chave}"):
                             st.session_state.dados_pacientes[chave] = {
@@ -113,6 +116,58 @@ if opcao == "Painel de Leitos":
                             st.session_state.nome_em_transicao = None
                             st.success("Dados salvos com sucesso!")
 
-    # ✅ Mostrar apenas a combinação selecionada
+                        if nome and medico:
+                            st.markdown("---")
+                            st.subheader("📌 Ficha Clínica Assistencial")
+                            risco = st.selectbox("Risco assistencial", ["Baixo", "Moderado", "Alto"], key=f"risco_{chave}")
+                            operadora = st.text_input("Operadora", key=f"operadora_{chave}")
+                            pendencia = st.text_area("Pendência da rotina", key=f"pendencia_{chave}")
+                            paliativo = st.radio("Cuidados paliativos?", ["Sim", "Não"], horizontal=True, key=f"paliativo_{chave}")
+                            cirurgia = st.radio("Cirurgia programada?", ["Sim", "Não"], horizontal=True, key=f"cirurgia_{chave}")
+                            desospitalizacao = st.radio("Em desospitalização?", ["Sim", "Não"], horizontal=True, key=f"desospitalizacao_{chave}")
+                            alta_amanha = st.radio("Alta prevista para amanhã?", ["Sim", "Não"], horizontal=True, key=f"alta_{chave}")
+                            intercorrencia = st.selectbox("Intercorrência", ["Nenhuma", "Verde", "Amarela", "Laranja", "Azul", "Outro"], key=f"intercorrencia_{chave}")
+                            desc_intercorrencia = st.text_area("Descrição da intercorrência", key=f"desc_inter_{chave}")
+                            reavaliacao = st.radio("Reavaliação necessária?", ["Sim", "Não"], horizontal=True, key=f"reavaliacao_{chave}")
+                            observacoes = st.text_area("Observações gerais", key=f"obs_{chave}")
+
+                            if st.button("Salvar ficha clínica", key=f"salvar_ficha_{chave}"):
+                                st.session_state.dados_pacientes[chave].update({
+                                    "risco": risco,
+                                    "operadora": operadora,
+                                    "pendencia": pendencia,
+                                    "paliativo": paliativo,
+                                    "cirurgia": cirurgia,
+                                    "desospitalizacao": desospitalizacao,
+                                    "alta_amanha": alta_amanha,
+                                    "intercorrencia": intercorrencia,
+                                    "desc_intercorrencia": desc_intercorrencia,
+                                    "reavaliacao": reavaliacao,
+                                    "observacoes": observacoes,
+                                })
+                                st.success("Ficha clínica salva com sucesso!")
+
+                            st.markdown("---")
+                            st.subheader("📤 Ações de Saída")
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                if st.button("Alta", key=f"alta_{chave}"):
+                                    st.session_state.historico_movimentos.append({"tipo": "Alta", "dados": st.session_state.dados_pacientes[chave], "leito": chave, "data": datetime.now().strftime("%d/%m/%Y %H:%M")})
+                                    st.session_state.dados_pacientes.pop(chave, None)
+                                    st.session_state.leito_em_edicao = None
+                                    st.success("Paciente transferido para painel de indicadores (Alta)")
+                            with col2:
+                                if st.button("Transferência", key=f"transferencia_{chave}"):
+                                    st.session_state.historico_movimentos.append({"tipo": "Transferência", "dados": st.session_state.dados_pacientes[chave], "leito": chave, "data": datetime.now().strftime("%d/%m/%Y %H:%M")})
+                                    st.session_state.dados_pacientes.pop(chave, None)
+                                    st.session_state.leito_em_edicao = None
+                                    st.success("Paciente transferido para painel de indicadores (Transferência)")
+                            with col3:
+                                if st.button("Óbito", key=f"obito_{chave}"):
+                                    st.session_state.historico_movimentos.append({"tipo": "Óbito", "dados": st.session_state.dados_pacientes[chave], "leito": chave, "data": datetime.now().strftime("%d/%m/%Y %H:%M")})
+                                    st.session_state.dados_pacientes.pop(chave, None)
+                                    st.session_state.leito_em_edicao = None
+                                    st.success("Paciente transferido para painel de indicadores (Óbito)")
+
     leitos_exibir = estrutura_leitos[unidade_selecionada][andar_selecionado]
     exibir_leitos(unidade_selecionada, andar_selecionado, leitos_exibir)
