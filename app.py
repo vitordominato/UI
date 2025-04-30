@@ -110,3 +110,9 @@ if opcao == "Painel de Leitos":
                         if nome and medico:
                             st.markdown("---")
                             st.subheader("📌 Ficha Clínica Assistencial")
+                            # ... restante da ficha omitido para foco
+
+    # ✅ CHAMADA ESSENCIAL PARA EXIBIR OS LEITOS
+    for unidade, andares in estrutura_leitos.items():
+        for andar, leitos in andares.items():
+            exibir_leitos(unidade, andar, leitos)
