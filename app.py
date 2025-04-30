@@ -15,7 +15,8 @@ if os.path.exists(CAMINHO_MEDICOS):
 else:
     lista_medicos = []
 
-# Dados simulados para estrutura de leitos por andar/unidade
+operadoras = ["AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"]
+
 estrutura_leitos = {
     "Unidade I": {
         "4º andar": list(range(401, 433)),
@@ -114,18 +115,19 @@ if opcao == "Painel de Leitos":
                                 "leito": leito,
                             }
                             st.session_state.nome_em_transicao = None
+                            st.session_state.leito_em_edicao = None
                             st.success("Dados salvos com sucesso!")
 
                         if nome and medico:
                             st.markdown("---")
                             st.subheader("📌 Ficha Clínica Assistencial")
                             risco = st.selectbox("Risco assistencial", ["Baixo", "Moderado", "Alto"], key=f"risco_{chave}")
-                            operadora = st.text_input("Operadora", key=f"operadora_{chave}")
+                            operadora = st.selectbox("Operadora", operadoras, key=f"operadora_{chave}")
                             pendencia = st.text_area("Pendência da rotina", key=f"pendencia_{chave}")
                             paliativo = st.radio("Cuidados paliativos?", ["Sim", "Não"], horizontal=True, key=f"paliativo_{chave}")
                             cirurgia = st.radio("Cirurgia programada?", ["Sim", "Não"], horizontal=True, key=f"cirurgia_{chave}")
                             desospitalizacao = st.radio("Em desospitalização?", ["Sim", "Não"], horizontal=True, key=f"desospitalizacao_{chave}")
-                            alta_amanha = st.radio("Alta prevista para amanhã?", ["Sim", "Não"], horizontal=True, key=f"alta_{chave}")
+                            alta_amanha = st.radio("Alta prevista para amanhã?", ["Sim", "Não"], horizontal=True, key=f"alta_prevista_{chave}")
                             intercorrencia = st.selectbox("Intercorrência", ["Nenhuma", "Verde", "Amarela", "Laranja", "Azul", "Outro"], key=f"intercorrencia_{chave}")
                             desc_intercorrencia = st.text_area("Descrição da intercorrência", key=f"desc_inter_{chave}")
                             reavaliacao = st.radio("Reavaliação necessária?", ["Sim", "Não"], horizontal=True, key=f"reavaliacao_{chave}")
@@ -151,19 +153,19 @@ if opcao == "Painel de Leitos":
                             st.subheader("📤 Ações de Saída")
                             col1, col2, col3 = st.columns(3)
                             with col1:
-                                if st.button("Alta", key=f"alta_{chave}"):
+                                if st.button("Alta", key=f"btn_alta_{chave}"):
                                     st.session_state.historico_movimentos.append({"tipo": "Alta", "dados": st.session_state.dados_pacientes[chave], "leito": chave, "data": datetime.now().strftime("%d/%m/%Y %H:%M")})
                                     st.session_state.dados_pacientes.pop(chave, None)
                                     st.session_state.leito_em_edicao = None
                                     st.success("Paciente transferido para painel de indicadores (Alta)")
                             with col2:
-                                if st.button("Transferência", key=f"transferencia_{chave}"):
+                                if st.button("Transferência", key=f"btn_transferencia_{chave}"):
                                     st.session_state.historico_movimentos.append({"tipo": "Transferência", "dados": st.session_state.dados_pacientes[chave], "leito": chave, "data": datetime.now().strftime("%d/%m/%Y %H:%M")})
                                     st.session_state.dados_pacientes.pop(chave, None)
                                     st.session_state.leito_em_edicao = None
                                     st.success("Paciente transferido para painel de indicadores (Transferência)")
                             with col3:
-                                if st.button("Óbito", key=f"obito_{chave}"):
+                                if st.button("Óbito", key=f"btn_obito_{chave}"):
                                     st.session_state.historico_movimentos.append({"tipo": "Óbito", "dados": st.session_state.dados_pacientes[chave], "leito": chave, "data": datetime.now().strftime("%d/%m/%Y %H:%M")})
                                     st.session_state.dados_pacientes.pop(chave, None)
                                     st.session_state.leito_em_edicao = None
