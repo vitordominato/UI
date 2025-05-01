@@ -51,17 +51,18 @@ if "editando" in st.session_state:
     unidade_sel, andar_sel, leito_sel = selected_chave.split("_")
     leito_sel = int(leito_sel)
     paciente_sel = df_leitos[df_leitos["chave"] == selected_chave]
-    nome_sel = paciente_sel["nome"].values[0] if not paciente_sel.empty else ""
-    medico_sel = paciente_sel["medico"].values[0] if not paciente_sel.empty else ""
+
+    def valor(col):
+        return paciente_sel[col].values[0] if not paciente_sel.empty and col in paciente_sel else ""
 
     st.title(f"📝 Editar Leito {leito_sel} - {unidade_sel} - {andar_sel}")
-    nome = st.text_input("Nome do paciente", value=nome_sel, key=f"nome_{selected_chave}")
+    nome = st.text_input("Nome do paciente", value=valor("nome"), key=f"nome_{selected_chave}")
     if lista_medicos:
         medico = st.selectbox("Médico responsável", options=lista_medicos,
-                              index=lista_medicos.index(medico_sel) if medico_sel in lista_medicos else 0,
+                              index=lista_medicos.index(valor("medico")) if valor("medico") in lista_medicos else 0,
                               key=f"medico_{selected_chave}")
     else:
-        medico = st.text_input("Médico responsável", value=medico_sel, key=f"medico_text_{selected_chave}")
+        medico = st.text_input("Médico responsável", value=valor("medico"), key=f"medico_text_{selected_chave}")
 
     if st.button("Salvar cadastro inicial", key=f"salvar_{selected_chave}"):
         df_leitos = df_leitos[df_leitos["chave"] != selected_chave]
@@ -80,18 +81,18 @@ if "editando" in st.session_state:
         st.rerun()
 
     st.markdown("### 📋 Ficha Clínica Assistencial")
-    especialidade = st.selectbox("Especialidade médica", ["", "Clínica Médica", "Cardiologia", "Hepatologia", "Cirurgia Geral", "Ortopedia", "Médico Assistente"], key=f"esp_{selected_chave}")
-    risco = st.selectbox("Risco assistencial", ["", "Baixo", "Moderado", "Alto"], key=f"risco_{selected_chave}")
-    operadora = st.selectbox("Operadora", ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"], key=f"op_{selected_chave}")
-    pendencia = st.text_area("Pendência da rotina", key=f"pend_{selected_chave}")
-    paliativo = st.radio("Cuidados paliativos?", ["", "Sim", "Não"], horizontal=True, key=f"palia_{selected_chave}")
-    cirurgia = st.radio("Cirurgia programada?", ["", "Sim", "Não"], horizontal=True, key=f"cir_{selected_chave}")
-    desospitalizacao = st.radio("Em desospitalização?", ["", "Sim", "Não"], horizontal=True, key=f"deso_{selected_chave}")
-    alta_amanha = st.radio("Alta prevista para amanhã?", ["", "Sim", "Não"], horizontal=True, key=f"alta_{selected_chave}")
-    intercorrencia = st.selectbox("Intercorrência", ["", "Nenhuma", "Verde", "Amarela", "Laranja", "Azul", "Outro"], key=f"inter_{selected_chave}")
-    desc_intercorrencia = st.text_area("Descrição da intercorrência", key=f"desc_{selected_chave}")
-    reavaliacao = st.radio("Reavaliação necessária?", ["", "Sim", "Não"], horizontal=True, key=f"reavalia_{selected_chave}")
-    observacoes = st.text_area("Observações gerais", key=f"obs_{selected_chave}")
+    especialidade = st.selectbox("Especialidade médica", ["", "Clínica Médica", "Cardiologia", "Hepatologia", "Cirurgia Geral", "Ortopedia", "Médico Assistente"], index=["", "Clínica Médica", "Cardiologia", "Hepatologia", "Cirurgia Geral", "Ortopedia", "Médico Assistente"].index(valor("especialidade")) if valor("especialidade") in ["", "Clínica Médica", "Cardiologia", "Hepatologia", "Cirurgia Geral", "Ortopedia", "Médico Assistente"] else 0, key=f"esp_{selected_chave}")
+    risco = st.selectbox("Risco assistencial", ["", "Baixo", "Moderado", "Alto"], index=["", "Baixo", "Moderado", "Alto"].index(valor("risco")) if valor("risco") in ["", "Baixo", "Moderado", "Alto"] else 0, key=f"risco_{selected_chave}")
+    operadora = st.selectbox("Operadora", ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"], index=["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"].index(valor("operadora")) if valor("operadora") in ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"] else 0, key=f"op_{selected_chave}")
+    pendencia = st.text_area("Pendência da rotina", value=valor("pendencia"), key=f"pend_{selected_chave}")
+    paliativo = st.radio("Cuidados paliativos?", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(valor("paliativo")) if valor("paliativo") in ["", "Sim", "Não"] else 0, horizontal=True, key=f"palia_{selected_chave}")
+    cirurgia = st.radio("Cirurgia programada?", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(valor("cirurgia")) if valor("cirurgia") in ["", "Sim", "Não"] else 0, horizontal=True, key=f"cir_{selected_chave}")
+    desospitalizacao = st.radio("Em desospitalização?", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(valor("desospitalizacao")) if valor("desospitalizacao") in ["", "Sim", "Não"] else 0, horizontal=True, key=f"deso_{selected_chave}")
+    alta_amanha = st.radio("Alta prevista para amanhã?", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(valor("alta_amanha")) if valor("alta_amanha") in ["", "Sim", "Não"] else 0, horizontal=True, key=f"alta_{selected_chave}")
+    intercorrencia = st.selectbox("Intercorrência", ["", "Nenhuma", "Verde", "Amarela", "Laranja", "Azul", "Outro"], index=["", "Nenhuma", "Verde", "Amarela", "Laranja", "Azul", "Outro"].index(valor("intercorrencia")) if valor("intercorrencia") in ["", "Nenhuma", "Verde", "Amarela", "Laranja", "Azul", "Outro"] else 0, key=f"inter_{selected_chave}")
+    desc_intercorrencia = st.text_area("Descrição da intercorrência", value=valor("desc_intercorrencia"), key=f"desc_{selected_chave}")
+    reavaliacao = st.radio("Reavaliação necessária?", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(valor("reavaliacao")) if valor("reavaliacao") in ["", "Sim", "Não"] else 0, horizontal=True, key=f"reavalia_{selected_chave}")
+    observacoes = st.text_area("Observações gerais", value=valor("observacoes"), key=f"obs_{selected_chave}")
 
     if st.button("Salvar ficha clínica", key=f"ficha_{selected_chave}"):
         df_leitos.loc[df_leitos["chave"] == selected_chave, [
