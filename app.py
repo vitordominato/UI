@@ -100,7 +100,11 @@ if st.session_state.modo == "cadastro" and st.session_state.editando:
         nome = st.text_input("Nome do paciente", value=valor("nome"))
         medico = st.selectbox("Médico responsável", medicos, index=medicos.index(valor("medico")) if valor("medico") in medicos else 0)
         if st.form_submit_button("Salvar cadastro"):
-            df_leitos.loc[df_leitos["leito"] == leito, ["nome", "medico"]] = [nome, medico]
+            if leito not in df_leitos["leito"].values:
+                novo = pd.DataFrame([[leito, nome, medico, "", "", "", "", "", "", "", "", "", ""]], columns=df_leitos.columns)
+                df_leitos = pd.concat([df_leitos, novo], ignore_index=True)
+            else:
+                df_leitos.loc[df_leitos["leito"] == leito, ["nome", "medico"]] = [nome, medico]
             salvar_base(df_leitos)
             st.session_state.modo = None
             st.session_state.editando = None
@@ -156,7 +160,7 @@ else:
 # Cadastro de Médicos (Aba lateral)
 # ------------------------------
 st.sidebar.title("🩺 Cadastro de Médico")
-novo_nome = st.sidebar.text_input("Nome completo do novo médico")
+novo_nome = st.sidebar.text_input("Nome do Médico")
 if st.sidebar.button("Adicionar Médico"):
     if novo_nome.strip():
         df_medicos = pd.DataFrame({"Nome do Médico": [novo_nome]})
