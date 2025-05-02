@@ -2,26 +2,51 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+import os
 
-# Configuração da página
+# ------------------------------
+# Configurações iniciais
+# ------------------------------
 st.set_page_config(layout="wide")
+st.title("📋 Painel de Leitos")
 
-# Caminhos dos arquivos
-CAMINHO_MEDICOS = "Cadastro_Medicos.xlsx"
-CAMINHO_LEITOS = "base_leitos.xlsx"
-CAMINHO_TRANSICOES = "transicoes.xlsx"
+# ------------------------------
+# Funções auxiliares
+# ------------------------------
+def carregar_medicos():
+    caminho = "Cadastro_Medicos.xlsx"
+    if Path(caminho).exists():
+        df = pd.read_excel(caminho)
+        return sorted(df["Nome do Médico"].dropna().unique().tolist())
+    return []
 
-# Inicializar variáveis de sessão
+def carregar_base():
+    if Path("base_leitos.xlsx").exists():
+        return pd.read_excel("base_leitos.xlsx")
+    return pd.DataFrame(columns=["leito", "nome", "medico", "especialidade", "operadora", "pendencia", "procedimento", "cirurgia", "observacao", "risco"])
+
+def salvar_base(df):
+    df.to_excel("base_leitos.xlsx", index=False)
+
+def valor(campo):
+    val = st.session_state.get("dados", {}).get(campo, "")
+    return "" if pd.isna(val) else val
+
+# ------------------------------
+# Sessões e estado
+# ------------------------------
 if "modo" not in st.session_state:
     st.session_state.modo = None
-if "leito_selecionado" not in st.session_state:
-    st.session_state.leito_selecionado = None
+if "editando" not in st.session_state:
+    st.session_state.editando = None
 if "unidade_selecionada" not in st.session_state:
     st.session_state.unidade_selecionada = "Unidade I"
 if "andar_selecionado" not in st.session_state:
     st.session_state.andar_selecionado = "4º andar"
 
-# Estrutura de leitos
+# ------------------------------
+# Dados principais
+# ------------------------------
 estrutura_leitos = {
     "Unidade I": {
         "4º andar": list(range(401, 433)),
@@ -44,95 +69,107 @@ estrutura_leitos = {
     }
 }
 
-# Carregar médicos
-if Path(CAMINHO_MEDICOS).exists():
-    df_medicos = pd.read_excel(CAMINHO_MEDICOS)
-    lista_medicos = sorted(df_medicos["Nome do Médico"].dropna().unique().tolist())
+unidade = st.selectbox("Unidade", list(estrutura_leitos.keys()), index=list(estrutura_leitos.keys()).index(st.session_state.unidade_selecionada))
+st.session_state.unidade_selecionada = unidade
+
+if st.session_state.andar_selecionado not in estrutura_leitos[unidade]:
+    st.session_state.andar_selecionado = list(estrutura_leitos[unidade].keys())[0]
+
+andar = st.selectbox("Andar", list(estrutura_leitos[unidade].keys()), index=list(estrutura_leitos[unidade].keys()).index(st.session_state.andar_selecionado))
+st.session_state.andar_selecionado = andar
+
+# ------------------------------
+# Carregar dados persistentes
+# ------------------------------
+df_leitos = carregar_base()
+medicos = carregar_medicos()
+
+# ------------------------------
+# Edição ou ficha clínica
+# ------------------------------
+if st.session_state.modo == "cadastro" and st.session_state.editando:
+    chave = st.session_state.editando
+    unidade, andar, leito = chave.split("_")
+    st.markdown(f"### 📝 Cadastro – Leito {leito} – {unidade} – {andar}")
+    if st.button("⬅️ Voltar", key="voltar"):
+        st.session_state.modo = None
+        st.session_state.editando = None
+        st.rerun()
+
+    with st.form("cadastro_form"):
+        nome = st.text_input("Nome do paciente", value=valor("nome"))
+        medico = st.selectbox("Médico responsável", medicos, index=medicos.index(valor("medico")) if valor("medico") in medicos else 0)
+        if st.form_submit_button("Salvar cadastro"):
+            df_leitos.loc[df_leitos["leito"] == leito, ["nome", "medico"]] = [nome, medico]
+            salvar_base(df_leitos)
+            st.session_state.modo = None
+            st.session_state.editando = None
+            st.rerun()
+
+elif st.session_state.modo == "ficha" and st.session_state.editando:
+    chave = st.session_state.editando
+    unidade, andar, leito = chave.split("_")
+    st.markdown(f"### 📄 Ficha Clínica – Leito {leito} – {unidade} – {andar}")
+    if st.button("⬅️ Voltar", key="voltar_ficha"):
+        st.session_state.modo = None
+        st.session_state.editando = None
+        st.rerun()
+
+    with st.form("ficha_form"):
+        especialidade = st.selectbox("Especialidade médica", ["", "Clínica Médica", "Cardiologia", "Hepatologia", "Cirurgia Geral", "Ortopedia", "Obstetrícia", "Pediatria", "Médico Assistente"], index=0 if valor("especialidade") == "" else ["", "Clínica Médica", "Cardiologia", "Hepatologia", "Cirurgia Geral", "Ortopedia", "Obstetrícia", "Pediatria", "Médico Assistente"].index(valor("especialidade")))
+        operadora = st.text_input("Operadora", value=valor("operadora"))
+        pendencia = st.text_input("Pendência da rotina", value=valor("pendencia"))
+        procedimento = st.text_input("Aguardando procedimento?", value=valor("procedimento"))
+        cirurgia = st.text_input("Cirurgia programada?", value=valor("cirurgia"))
+        observacao = st.text_area("Observações gerais", value=valor("observacao"))
+        risco = st.selectbox("Risco assistencial", ["", "Baixo", "Moderado", "Alto"], index=0 if valor("risco") == "" else ["", "Baixo", "Moderado", "Alto"].index(valor("risco")))
+
+        if st.form_submit_button("Salvar ficha clínica"):
+            df_leitos.loc[df_leitos["leito"] == leito, ["especialidade", "operadora", "pendencia", "procedimento", "cirurgia", "observacao", "risco"]] = [
+                especialidade, operadora, pendencia, procedimento, cirurgia, observacao, risco
+            ]
+            salvar_base(df_leitos)
+            st.session_state.modo = None
+            st.session_state.editando = None
+            st.rerun()
+
 else:
-    lista_medicos = []
-
-# Carregar base de leitos
-if Path(CAMINHO_LEITOS).exists():
-    df_leitos = pd.read_excel(CAMINHO_LEITOS)
-else:
-    df_leitos = pd.DataFrame(columns=["chave", "nome", "medico", "especialidade", "risco", "operadora", "intercorrencia", "paliativo", "alta_amanha", "pendencia", "procedimento", "cirurgia", "observacao"])
-
-# Navegação
-st.sidebar.title("🧭 Navegação")
-pagina = st.sidebar.radio("Escolha a aba:", ["Painel de Leitos", "Cadastro de Médico"])
-
-# Página: Cadastro de Médico
-if pagina == "Cadastro de Médico":
-    st.markdown("## 🩺 Cadastro de Médico")
-    novo_nome = st.text_input("Nome completo do novo médico")
-
-    if st.button("Adicionar Médico"):
-        if novo_nome.strip() != "":
-            df_novo = pd.DataFrame([[novo_nome]], columns=["Nome do Médico"])
-            df_medicos = pd.concat([df_medicos, df_novo], ignore_index=True).drop_duplicates().sort_values("Nome do Médico")
-            df_medicos.to_excel(CAMINHO_MEDICOS, index=False)
-            st.success("✅ Médico cadastrado com sucesso!")
-        else:
-            st.warning("⚠️ Nome inválido.")
-
-    st.markdown("### 👨‍⚕️ Médicos Cadastrados")
-    st.dataframe(df_medicos)
-
-# Página: Painel de Leitos
-elif pagina == "Painel de Leitos":
-    st.title("📋 Painel de Leitos")
-
-    unidade = st.selectbox("Unidade", list(estrutura_leitos.keys()), index=list(estrutura_leitos.keys()).index(st.session_state.unidade_selecionada))
-    st.session_state.unidade_selecionada = unidade
-
-    andares_disponiveis = list(estrutura_leitos[unidade].keys())
-    if st.session_state.andar_selecionado not in andares_disponiveis:
-        st.session_state.andar_selecionado = andares_disponiveis[0]
-
-    andar = st.selectbox("Andar", andares_disponiveis, index=andares_disponiveis.index(st.session_state.andar_selecionado))
-    st.session_state.andar_selecionado = andar
-
-    leitos = sorted(estrutura_leitos[unidade][andar])
-
-    for leito in leitos:
-        chave = f"{unidade}_{andar}_{leito}"
-        dados = df_leitos[df_leitos["chave"] == chave].iloc[0] if chave in df_leitos["chave"].values else pd.Series()
-        nome = dados.get("nome", "[Vazio]") if not dados.empty else "[Vazio]"
-
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.markdown(f"### Leito {leito}")
-        with col2:
+    leitos = estrutura_leitos[unidade][andar]
+    df_leitos = carregar_base()
+    colunas = st.columns(6)
+    for i, leito in enumerate(sorted(leitos)):
+        with colunas[i % 6]:
+            st.markdown(f"**Leito {leito}**")
+            dados_leito = df_leitos[df_leitos["leito"] == leito].squeeze()
+            nome = dados_leito["nome"] if not dados_leito.empty else "[Vazio]"
+            chave = f"{unidade}_{andar}_{leito}"
             if st.button(f"✏️ {nome}", key=f"cadastro_{chave}"):
+                st.session_state.editando = chave
                 st.session_state.modo = "cadastro"
-                st.session_state.leito_selecionado = chave
-                st.experimental_rerun()
+                st.rerun()
+            if nome != "[Vazio]" and st.button("📝 Ficha Clínica", key=f"ficha_{chave}"):
+                st.session_state.editando = chave
+                st.session_state.modo = "ficha"
+                st.rerun()
 
-# Página de edição separada
-if st.session_state.modo == "cadastro" and st.session_state.leito_selecionado:
-    st.title(f"✏️ Cadastro – {st.session_state.leito_selecionado.replace('_', ' – ')}")
+# ------------------------------
+# Cadastro de Médicos (Aba lateral)
+# ------------------------------
+st.sidebar.title("🩺 Cadastro de Médico")
+novo_nome = st.sidebar.text_input("Nome completo do novo médico")
+if st.sidebar.button("Adicionar Médico"):
+    if novo_nome.strip():
+        df_medicos = pd.DataFrame({"Nome do Médico": [novo_nome]})
+        path = "Cadastro_Medicos.xlsx"
+        if Path(path).exists():
+            df_existente = pd.read_excel(path)
+            df_final = pd.concat([df_existente, df_medicos]).drop_duplicates().sort_values("Nome do Médico")
+        else:
+            df_final = df_medicos
+        df_final.to_excel(path, index=False)
+        st.sidebar.success("Médico adicionado com sucesso!")
+        st.rerun()
 
-    if st.button("🔙 Voltar", key="voltar"):
-        st.session_state.modo = None
-        st.experimental_rerun()
-
-    col1, col2 = st.columns(2)
-    with col1:
-        nome = st.text_input("Nome do paciente")
-    with col2:
-        medico = st.selectbox("Médico responsável", options=lista_medicos)
-
-    if st.button("Salvar cadastro"):
-        dados_novos = {
-            "chave": st.session_state.leito_selecionado,
-            "nome": nome,
-            "medico": medico,
-            "registrado_em": datetime.now().strftime("%d/%m/%Y %H:%M")
-        }
-
-        df_leitos = df_leitos[df_leitos["chave"] != st.session_state.leito_selecionado]
-        df_leitos = pd.concat([df_leitos, pd.DataFrame([dados_novos])], ignore_index=True)
-        df_leitos.to_excel(CAMINHO_LEITOS, index=False)
-
-        st.session_state.modo = None
-        st.experimental_rerun()
+if Path("Cadastro_Medicos.xlsx").exists():
+    st.sidebar.markdown("### 👨‍⚕️ Médicos Cadastrados")
+    st.sidebar.dataframe(pd.read_excel("Cadastro_Medicos.xlsx"))
