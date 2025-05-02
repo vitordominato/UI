@@ -101,7 +101,10 @@ if st.session_state.modo == "cadastro" and st.session_state.editando:
         medico = st.selectbox("Médico responsável", medicos, index=medicos.index(valor("medico")) if valor("medico") in medicos else 0)
         if st.form_submit_button("Salvar cadastro"):
             if leito not in df_leitos["leito"].values:
-                novo = pd.DataFrame([[leito, nome, medico, "", "", "", "", "", "", "", "", "", ""]], columns=df_leitos.columns)
+                novo = pd.DataFrame([[''] * len(df_leitos.columns)], columns=df_leitos.columns)
+                novo.loc[0, "leito"] = leito
+                novo.loc[0, "nome"] = nome
+                novo.loc[0, "medico"] = medico
                 df_leitos = pd.concat([df_leitos, novo], ignore_index=True)
             else:
                 df_leitos.loc[df_leitos["leito"] == leito, ["nome", "medico"]] = [nome, medico]
