@@ -21,3 +21,4 @@ httpx==0.25.2
 websockets==12.0
 streamlit==1.29.0
 pandas==2.2.2
+gspread
