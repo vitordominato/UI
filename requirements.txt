@@ -10,7 +10,6 @@ alembic==1.12.1
 pytest==7.4.3
 black==23.11.0
 isort==5.12.0
-httpx==0.25.2
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 aiofiles==23.2.1
@@ -21,6 +20,4 @@ httpx==0.25.2
 websockets==12.0
 streamlit==1.29.0
 pandas==2.2.2
-gspread
-oauth2client
 firebase-admin
