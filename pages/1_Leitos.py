@@ -148,7 +148,7 @@ def ficha_clinica_form(leito, leito_id, key_prefix="ficha"):
 df_leitos = garantir_colunas(get_leitos_cached())
 df_leitos = df_leitos.sort_values(by=["leito"]).reset_index(drop=True)
 
-lista_medicos = obter_lista_medicos()
+lista_medicos = obter_medicos()
 # Adapte conforme sua lógica para equipes, se aplicável
 
 for idx, leito in df_leitos.iterrows():
