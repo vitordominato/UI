@@ -1,8 +1,9 @@
 import streamlit as st
 import pandas as pd
-from firebase_utils import salvar_leito, obter_leitos, salvar_ficha_clinica, obter_ficha_clinica
+from firebase_utils import (
+    obter_leitos, salvar_leito, salvar_ficha_clinica, obter_ficha_clinica, obter_lista_medicos
+)
 
-# Colunas essenciais do leito (não mude!)
 COLUNAS_LEITOS = [
     'leito', 'nome', 'medico', 'equipe', 'especialidade', 'unidade', 'andar',
     'risco_assistencial', 'operadora', 'pendencia_rotina', 'descricao_pendencia',
@@ -11,6 +12,7 @@ COLUNAS_LEITOS = [
 ]
 
 st.set_page_config(page_title="Gestão de Leitos", layout="wide")
+st.header("Painel de Leitos Hospitalares")
 
 @st.cache_data(ttl=60)
 def get_leitos_cached():
@@ -33,7 +35,6 @@ def ficha_clinica_form(leito, leito_id, key_prefix="ficha"):
     operadora = ficha.get('operadora', "")
     pendencia_rotina = ficha.get('pendencia_rotina', "")
     descricao_pendencia = ficha.get('descricao_pendencia', "")
-    pendencia_resolvida = ficha.get('pendencia_resolvida', "Não")
     paliativo = ficha.get('cuidados_paliativos', "")
     autorizacao = ficha.get('autorizacao_pendente', "")
     desospitalizacao = ficha.get('desospitalizacao', "")
@@ -42,33 +43,79 @@ def ficha_clinica_form(leito, leito_id, key_prefix="ficha"):
     desc_intercorrencia = ficha.get('desc_intercorrencia', "")
     reavaliacao = ficha.get('reavaliacao_medica', "")
     obs_gerais = ficha.get('observacoes_gerais', "")
-    resposta_aut = ficha.get('resposta_aut', "")
-    detalhe_aut = ficha.get('detalhe_aut', "")
 
     col_campos = st.columns(5)
     with col_campos[0]:
         st.markdown("Operadora")
-        nova_operadora = st.selectbox("", ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"], index=["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"].index(operadora) if operadora in ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"] else 0, key=f"{key_prefix}_operadora_{leito_id}")
+        nova_operadora = st.selectbox(
+            "",
+            ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"],
+            index=["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"].index(operadora) if operadora in ["", "AMIL", "CABERJ", "MEDSENIOR", "UNIMED", "Bradesco", "Sul America", "Notre Dame/Intermedica", "Outros"] else 0,
+            key=f"{key_prefix}_operadora_{leito_id}"
+        )
     with col_campos[1]:
         st.markdown("Risco assistencial")
-        novo_risco = st.selectbox("", ["", "Baixo", "Moderado", "Alto"], index=["", "Baixo", "Moderado", "Alto"].index(risco) if risco in ["", "Baixo", "Moderado", "Alto"] else 0, key=f"{key_prefix}_risco_{leito_id}")
+        novo_risco = st.selectbox(
+            "",
+            ["", "Baixo", "Moderado", "Alto"],
+            index=["", "Baixo", "Moderado", "Alto"].index(risco) if risco in ["", "Baixo", "Moderado", "Alto"] else 0,
+            key=f"{key_prefix}_risco_{leito_id}"
+        )
     with col_campos[2]:
         st.markdown("Cuidados paliativos?")
-        novo_paliativo = st.selectbox("", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(paliativo) if paliativo in ["", "Sim", "Não"] else 0, key=f"{key_prefix}_paliativo_{leito_id}")
+        novo_paliativo = st.selectbox(
+            "",
+            ["", "Sim", "Não"],
+            index=["", "Sim", "Não"].index(paliativo) if paliativo in ["", "Sim", "Não"] else 0,
+            key=f"{key_prefix}_paliativo_{leito_id}"
+        )
     with col_campos[3]:
         st.markdown("Desospitalização?")
-        nova_desospitalizacao = st.selectbox("", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(desospitalizacao) if desospitalizacao in ["", "Sim", "Não"] else 0, key=f"{key_prefix}_desospitalizacao_{leito_id}")
+        nova_desospitalizacao = st.selectbox(
+            "",
+            ["", "Sim", "Não"],
+            index=["", "Sim", "Não"].index(desospitalizacao) if desospitalizacao in ["", "Sim", "Não"] else 0,
+            key=f"{key_prefix}_desospitalizacao_{leito_id}"
+        )
     with col_campos[4]:
         st.markdown("Alta prevista para amanhã?")
-        nova_alta_amanha = st.selectbox("", ["", "Sim", "Não"], index=["", "Sim", "Não"].index(alta_amanha) if alta_amanha in ["", "Sim", "Não"] else 0, key=f"{key_prefix}_alta_amanha_{leito_id}")
+        nova_alta_amanha = st.selectbox(
+            "",
+            ["", "Sim", "Não"],
+            index=["", "Sim", "Não"].index(alta_amanha) if alta_amanha in ["", "Sim", "Não"] else 0,
+            key=f"{key_prefix}_alta_amanha_{leito_id}"
+        )
 
     st.markdown("---")
-    nova_pendencia_rotina = st.selectbox("Pendência do dia", ["nenhuma", "rotina tarde", "plantão noturno"], index=["nenhuma", "rotina tarde", "plantão noturno"].index(pendencia_rotina) if pendencia_rotina in ["nenhuma", "rotina tarde", "plantão noturno"] else 0, key=f"{key_prefix}_pendencia_rotina_{leito_id}")
-    nova_descricao_pendencia = st.text_input("Descrição da pendência", value=descricao_pendencia, key=f"{key_prefix}_descricao_pendencia_{leito_id}")
+    nova_pendencia_rotina = st.selectbox(
+        "Pendência do dia",
+        ["nenhuma", "rotina tarde", "plantão noturno"],
+        index=["nenhuma", "rotina tarde", "plantão noturno"].index(pendencia_rotina) if pendencia_rotina in ["nenhuma", "rotina tarde", "plantão noturno"] else 0,
+        key=f"{key_prefix}_pendencia_rotina_{leito_id}"
+    )
+    nova_descricao_pendencia = st.text_input(
+        "Descrição da pendência",
+        value=descricao_pendencia,
+        key=f"{key_prefix}_descricao_pendencia_{leito_id}"
+    )
 
-    nova_intercorrencia = st.selectbox("Intercorrência nas últimas 24h?", ["", "Não", "Verde", "Laranja", "Amarela", "Azul", "Outras"], index=["", "Não", "Verde", "Laranja", "Amarela", "Azul", "Outras"].index(intercorrencia) if intercorrencia in ["", "Não", "Verde", "Laranja", "Amarela", "Azul", "Outras"] else 0, key=f"{key_prefix}_intercorrencia_{leito_id}")
-    nova_desc_intercorrencia = st.text_area("Descrição da intercorrência", value=desc_intercorrencia, key=f"{key_prefix}_desc_intercorrencia_{leito_id}")
-    novas_obs_gerais = st.text_area("Observações gerais", value=obs_gerais, key=f"{key_prefix}_obs_gerais_{leito_id}")
+    nova_intercorrencia = st.selectbox(
+        "Intercorrência nas últimas 24h?",
+        ["", "Não", "Verde", "Laranja", "Amarela", "Azul", "Outras"],
+        index=["", "Não", "Verde", "Laranja", "Amarela", "Azul", "Outras"].index(intercorrencia) if intercorrencia in ["", "Não", "Verde", "Laranja", "Amarela", "Azul", "Outras"] else 0,
+        key=f"{key_prefix}_intercorrencia_{leito_id}"
+    )
+    nova_desc_intercorrencia = st.text_area(
+        "Descrição da intercorrência",
+        value=desc_intercorrencia,
+        key=f"{key_prefix}_desc_intercorrencia_{leito_id}"
+    )
+
+    novas_obs_gerais = st.text_area(
+        "Observações gerais",
+        value=obs_gerais,
+        key=f"{key_prefix}_obs_gerais_{leito_id}"
+    )
 
     alterou_ficha = (
         novo_risco != risco or
@@ -98,18 +145,33 @@ def ficha_clinica_form(leito, leito_id, key_prefix="ficha"):
         salvar_ficha_clinica(leito_id, ficha_dict)
         st.success("Ficha clínica salva!")
 
-st.header("Painel de Leitos")
 df_leitos = garantir_colunas(get_leitos_cached())
 df_leitos = df_leitos.sort_values(by=["leito"]).reset_index(drop=True)
+
+lista_medicos = obter_lista_medicos()
+# Adapte conforme sua lógica para equipes, se aplicável
 
 for idx, leito in df_leitos.iterrows():
     with st.container():
         cols = st.columns([1, 3, 3, 2])
         cols[0].markdown(f"**Leito {leito['leito']}**")
-        novo_nome = cols[1].text_input("Nome do paciente", value=leito.get("nome", ""), key=f"edit_nome_{leito['leito']}")
-        novo_medico = cols[2].text_input("Médico", value=leito.get("medico", ""), key=f"edit_medico_{leito['leito']}")
-        novo_equipe = cols[3].text_input("Equipe", value=leito.get("equipe", ""), key=f"edit_equipe_{leito['leito']}")
-        # Salvamento manual simples
+        novo_nome = cols[1].text_input(
+            "Nome do paciente",
+            value=leito.get("nome", ""),
+            key=f"edit_nome_{leito['leito']}"
+        )
+        novo_medico = cols[2].selectbox(
+            "Médico",
+            options=lista_medicos,
+            index=lista_medicos.index(leito.get("medico", "")) if leito.get("medico", "") in lista_medicos else 0,
+            key=f"edit_medico_{leito['leito']}"
+        )
+        novo_equipe = cols[3].text_input(
+            "Equipe",
+            value=leito.get("equipe", ""),
+            key=f"edit_equipe_{leito['leito']}"
+        )
+
         if st.button(f"Salvar alterações do leito {leito['leito']}", key=f"salvar_{leito['leito']}"):
             leito_dict = leito.to_dict()
             leito_dict.update({
