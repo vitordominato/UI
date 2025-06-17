@@ -156,3 +156,12 @@ def obter_historico_admissoes():
     if data:
         return [{**{'hist_id': k}, **v} for k, v in data.items()]
     return []
+    
+def limpar_leito(leito_id):
+    """Remove todos os dados do leito (zera o cadastro) no Firebase."""
+    inicializar_firebase()
+    ref = db.reference(f'leitos/{leito_id}')
+    ref.delete()
+    # Se quiser, também pode limpar a ficha clínica associada:
+    ficha_ref = db.reference(f'fichas_clinicas/{leito_id}')
+    ficha_ref.delete()
