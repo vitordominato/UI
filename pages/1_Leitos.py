@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from firebase_utils import (
-    obter_leitos, salvar_leito, limpar_leito, salvar_ficha_clinica, obter_ficha_clinica
+    obter_leitos, salvar_leito, salvar_ficha_clinica, obter_ficha_clinica
 )
 
 # ---- Funções auxiliares, copie igual do seu app.py original ----
